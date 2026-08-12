@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # apps/web
@@ -11,7 +11,8 @@ The Vite + React SPA, deployed through the live pipeline. Live mode (`LiveApp.ts
 `@crossy/engine`'s navigation ops per the desktop interaction spec. Around the board
 sit the account and gameplay surfaces: identity and auth (`src/identity/`, Supabase and
 mock adapters), the display-name and profile flows (`src/profile/`) over `authedFetch`,
-live reactions (`src/reactions/`), and product analytics (`src/analytics/`, PostHog
+live reactions (`src/reactions/`), the check-vote ceremony (`src/ui/checkVote/`), the
+completion share card (`src/share/`), and product analytics (`src/analytics/`, PostHog
 behind a noop-by-default port). The same `GameStore`, grid, and engine navigation also
 back a demo mode: a tiny in-memory session (`src/demo/fakeSession.ts`) stands in for
 `apps/session` behind the store's transport port, so the demo boards and the taste-pass
@@ -50,9 +51,11 @@ What to feel:
   click, with no motion tween (Decision 2.1d-2).
 - **Resync pill on a killed connection.** In one tab open devtools, go to the Network
   panel, and switch it to Offline (or set throttling to Offline). Type a few letters,
-  then switch back to Online. The Reconnecting and Resyncing pill shows while the
-  socket is down, the transport reconnects on its own, and both boards reconcile from
-  the snapshot (PROTOCOL sections 7 and 8).
+  then switch back to Online. The Reconnecting and Resyncing pill shows once the
+  connection has stayed non-live past a 2 s grace (`RECONNECT_OVERLAY_GRACE_MS`,
+  `src/hooks/useDelayedFlag.ts`), so a Railway edge recycle, which heals in about 200
+  ms, never flashes chrome. The transport reconnects on its own and both boards
+  reconcile from the snapshot (PROTOCOL sections 7 and 8).
 
 Press Ctrl+C to stop: it drains the session (SIGTERM, so the write-behind flush runs)
 then stops the containers. Tokens in the printed urls last one hour, so re-run for
@@ -76,8 +79,16 @@ repo's, never anything else on those ports.
 - `src/net/` - the WebSocket transport (`wsTransport.ts`): hello, heartbeat, codec
   decode, and the PROTOCOL section 7 reconnect backoff (0, 1, 2, 4, 8, 16, 30 s capped,
   full jitter, reset after a 30 s survival), unit-tested in `backoff.test.ts` and
-  `wsTransport.test.ts`. `connect.ts` wires it into live mode; `authedFetch.ts` is the
-  bearer-authenticated REST client the account surfaces call.
+  `wsTransport.test.ts`. Every socket close logs a greppable `crossy:` diagnostic line
+  (code, reason, clean flag; Track D). `connect.ts` wires it into live mode;
+  `authedFetch.ts` is the bearer-authenticated REST client the account surfaces call;
+  `shareLink.ts` mints the completion share link over the same seam.
+- `src/share/` - the completion share card: the letter-free card data, the export and
+  share channel, and the button that mints the link.
+- `src/ui/checkVote/` - the check-vote ceremony (PROTOCOL section 10): the
+  hold-to-propose button, ballot chips, and board overlay over the store's vote state.
+- `src/hooks/` - `useDelayedFlag`, the reconnect-grace engine: a flag that arms on true
+  and only shows after the grace window, hiding at once on false.
 - `src/input/` - the spec's keyboard map and pointer paths as pure transforms, every
   cursor move through the engine ops (`getNextCell`, `wordBounds`, `tabTarget`,
   `typingAdvance`, `backspaceTarget`).
@@ -111,8 +122,10 @@ repo's, never anything else on those ports.
    the store requests a sync and the "Resyncing..." pill shows until the snapshot
    lands. "Drop connection" shows "Reconnecting..." and then reconciles a fresh
    welcome; letters typed while down stay pending in the overlay and re-send on
-   reconnect (PROTOCOL sections 7 and 8). The grid stays navigable throughout
-   (Decision 2.1d-3).
+   reconnect (PROTOCOL sections 7 and 8). Either pill renders only once the non-live
+   state has held past the 2 s grace (`RECONNECT_OVERLAY_GRACE_MS`), so the demo's
+   drop and resync gaps deliberately outlast it (`src/demo/fakeSession.ts`). The grid
+   stays navigable throughout (Decision 2.1d-3).
 6. **Terminal freeze.** "Complete game" emits `gameCompleted`. Typing, `Space`,
    `Backspace`, and `Delete` are refused locally and nothing reaches the wire;
    clicks, arrows, and `Tab` keep working so the frozen board stays explorable.

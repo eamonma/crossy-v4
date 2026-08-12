@@ -1,14 +1,16 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # @crossy/session
 
 The session service (DESIGN.md section 3, section 6): the stateful WebSocket tier. One
-in-memory actor per live game is the single writer for its `game_state` and `cell_events`.
-Handshake, mailbox, write-behind flush, reconnect resync, and SIGTERM drain landed in Wave
-2.1c and 2.2; this file documents the M3a membership lifecycle additions.
+in-memory actor per live game is the single writer for its `game_state`, `cell_events`,
+`check_events`, and `check_vote_events`. Handshake, mailbox, write-behind flush,
+reconnect resync, and SIGTERM drain are the core; this file also covers the membership
+lifecycle, Live Activity push, the session half of the check vote, analytics, and the
+service's logging posture.
 
 ## Endpoints
 
@@ -68,6 +70,49 @@ is worth a push (rate and change gating), `tokens.ts` reads the tokens the API r
 `apns.ts` is the APNs adapter over HTTP/2. It is built only when the APNs env is complete;
 otherwise the emitter is inert and the rest of the service runs unchanged, so dev and CI never
 touch APNs.
+
+## Analytics (`src/analytics/`)
+
+A noop-by-default PostHog port, enabled by `POSTHOG_TOKEN`; the event vocabulary is
+ANALYTICS.md. Properties are flat ids and counts, so board content structurally cannot
+ride an event (INV-6).
+
+## The check vote (D32)
+
+The engine owns the vote state machine (`applyWithVote`); the session owns what the engine
+may not touch: clock, presence, persistence. PROTOCOL.md section 10 and
+design/check-vote/UX.md are the law.
+
+- **Timebox.** `CHECK_VOTE_TTL_MS = 30_000`, session-owned (`actor.ts`). When a vote opens
+  the actor stamps `expiresAt` = now + TTL onto the broadcast and the snapshot and arms a
+  timer; expiry reaches the engine as an `expireCheckVote` input, since the engine models
+  no clock (INV-9). Per-actor injectable via `ActorOptions.checkVoteTtlMs`, so tests
+  exercise expiry without a real 30 s wait.
+- **Electorate.** Frozen at proposal accept time from the live host and solver connections
+  on the actor (always including the proposer, ascending ASCII, spectators never vote) and
+  handed to the engine as data on the command.
+- **Errors.** `VOTE_PENDING`, `NO_VOTE_OPEN`, `NOT_ELECTOR`, `ALREADY_VOTED` (PROTOCOL.md
+  section 11), each non-fatal and carrying the offending commandId.
+- **Persistence.** Vote lifecycle rows buffer under the write-behind and flush to the
+  append-only `check_vote_events` log exactly like `check_events` (`writer.ts`, migration
+  0014). The open vote rides every snapshot: `checkVote` on the section 4 board payload and
+  on the persisted `game_state` row.
+- **Crash rehydrate.** A hydrated vote whose deadline already passed closes failed
+  `EXPIRED` with no broadcast (the welcome snapshot heals it); the flush is posted through
+  the mailbox. A vote still in the future re-arms the timer for the remaining time.
+
+## Logs and diagnostics (Track D)
+
+Structured lines carry ids, codes, and counts only, never cell values (INV-6):
+
+- Every socket close emits one line: gameId, userId (or `pre-handshake`), the close code,
+  `socketAgeMs`, `livenessFired`, and `wasLast` (whether the close emptied the actor). A
+  distinct line marks a liveness-timer reap (`server.ts`).
+- The inline submit path catches flush rejections: the buffer is retained and the actor and
+  socket stay up, because one process hosts many games and a Postgres fault on one must
+  never fault the process. Genuinely unknown faults still fail fast:
+  `unhandledRejection` and `uncaughtException` handlers log the stack and exit 1
+  (`main.ts`), so Railway restarts the service and the crash is never blind.
 
 ## Configuration
 

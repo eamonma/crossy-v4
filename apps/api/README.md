@@ -1,14 +1,15 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # @crossy/api
 
 The core API (DESIGN.md section 7): a stateless modular monolith over REST. Modules:
-identity and membership, puzzle catalog, games, and archive (post-game analysis). It is
-the single writer on `users`, `memberships`, `game_denylist`, and the puzzle and game
-catalog tables.
+identity and membership, puzzle catalog, games, share (`src/share/`: the public
+completion card and page), and archive (post-game analysis). It is the single writer on
+`users`, `memberships`, `game_denylist`, `share_tokens`, and the puzzle and game catalog
+tables.
 
 ## Endpoints
 
@@ -53,6 +54,10 @@ serves several routes documented near their code rather than here:
 - `POST /games/{id}/abandon`: host only. Authorize the host and dispatch to the session, which
   emits and synchronously flushes `gameAbandoned` (the actor executes; abandon on a terminal
   game is a no-op, INV-4).
+- `POST /games/{id}/share`: member only, completed games only (a non-member is
+  `NOT_PARTICIPANT`, an ongoing game is `GAME_NOT_FOUND`). Mint the public share link,
+  idempotent: one active token per game, a re-POST returns the existing one. Returns
+  `{shareUrl, token}` (`games/routes.ts`, design/post-game/SHARE.md).
 - `DELETE /account`: any authenticated user. Delete the caller's own account: tombstone the
   mirror row (scrub PII, keep the id), remove membership and denylist rows, run host succession
   (DESIGN.md section 7), and remove the vendor identity behind an injected port. PROTOCOL.md
@@ -71,8 +76,16 @@ serves several routes documented near their code rather than here:
   (INV-6; the endpoint is public and third-party-cached, DESIGN.md section 7). The code is
   resolved with the join-by-code normalization (`games/lookup.ts`, INV-1); an unknown or
   malformed code is `GAME_NOT_FOUND` on the REST error envelope.
+- `GET /s/{token}`: public, no auth. The completion share page: an HTML shell whose
+  OpenGraph tags feed unfurlers and whose hero is the replay loop, all built from the
+  letter-free analysis bundle (INV-6). The token is the only capability
+  (`share/routes.ts`, design/post-game/SHARE.md).
+- `GET /s/{token}/card.png`: public. The server-rasterized card, `variant=og|portrait`
+  and `ground=light|dark`; an unknown token or unrecognized value is a soft 404
+  (`share/routes.ts`).
 
-Every route except the well-known file and `GET /g/{code}` is bearer-authenticated through the `AuthPort`; the
+Every route except the well-known file, `GET /g/{code}`, and the public `/s/{token}`
+surface (the token is the only capability) is bearer-authenticated through the `AuthPort`; the
 first authenticated request mirrors the identity into `users` (JIT upsert, the API being the
 single writer on `users`).
 
@@ -122,6 +135,10 @@ Supabase adapter in production with no branching. Alternatives considered: raw `
 (no dependency, but hand-rolled routing and no clean in-process test entry) and Express
 (heavier, callback-shaped, and its testing story wants a live server or `supertest`). Revisit
 if the API grows needs Hono does not cover.
+
+One amendment since: the server-side card render added `@resvg/resvg-js` (a native
+rasterizer) and the workspace `@crossy/share-card`, so the runtime dependency surface is
+no longer Hono alone.
 
 ## Invite codes
 
