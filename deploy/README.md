@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # Crossy deploy (Wave 2.2)
@@ -8,8 +8,9 @@ verified: 133db08
 Production deploys happen only from CI, off `main`, never from a laptop. `main` is golden:
 a ruleset requires a PR plus the two green checks (`lint + typecheck + unit` and
 `M1 Playwright smoke`), so anything on `main` already passed CI. The `Deploy` workflow
-(`.github/workflows/deploy.yml`) builds three images, pushes them to GHCR, and rolls three
-Railway services onto them. Railway and the hosted database live behind Railway Pro and a
+(`.github/workflows/deploy.yml`) builds the images whose inputs changed, pushes them to
+GHCR, and rolls the matching Railway services onto them (see What happens on a push to
+main). Railway and the hosted database live behind Railway Pro and a
 Supabase project the owner creates in `us-east-1` (co-located with the Railway `us-east`
 region, per the Wave 0.2c region note and SP3).
 
@@ -195,7 +196,13 @@ On every deploy (push to `main` and `workflow_dispatch`) the `migrate` job runs 
    against a conservative deny-list (DROP, RENAME, TRUNCATE, ALTER COLUMN ... TYPE,
    DELETE FROM, UPDATE, SET NOT NULL, REVOKE). It strips comments and string literals first, so
    a comment mentioning `DROP` does not trip it, and it scans DO-block bodies, so a destructive
-   statement cannot hide there. If anything trips, the deploy FAILS and points here.
+   statement cannot hide there. It also requires the Drizzle journal's `when` timestamps to be
+   strictly increasing by idx (`scanJournalOrder`): Drizzle applies a migration only when its
+   `when` exceeds the highest `created_at` already recorded, so a poisoned (round or future)
+   stamp makes an existing database silently skip later migrations while a fresh one applies
+   everything. That skipped 0009/0010 in production only, with CI green (#181). If anything
+   trips, the deploy FAILS and points here. The #181 follow-up, switching the shared applier
+   to hash-based apply so timestamps stop deciding anything, is still open.
 2. `deploy/migrate.ts` applies the migrations over `MIGRATION_DATABASE_URL` (the session
    pooler: the runner cannot reach the IPv6-only direct host).
 
@@ -333,20 +340,32 @@ actions, in order:
 
 ## What happens on a push to main
 
+Deploys are selective (#334): before it, every merge rebuilt and redeployed everything,
+and a docs-only push once restarted the session service under live solvers and dropped
+every WebSocket.
+
 1. A PR merges to `main`. It already passed the required checks, so `Deploy` does NOT re-run
    lint / typecheck / test / smoke (a comment in the workflow says so).
-2. `build-and-push` builds `apps/{api,session,web}/Dockerfile` (context = repo root) and
-   pushes `ghcr.io/eamonma/crossy-{api,session,web}` tagged `:latest` and `:<sha>`.
-3. `migrate` runs the expand-only guard, then applies the committed migrations to hosted
-   Postgres (see Migration flow above). It runs BEFORE `roll`, so expand-before-code holds by
-   job ordering. If the guard trips or `MIGRATION_DATABASE_URL` is absent, the deploy fails here
-   and `roll` does not run.
-4. `roll` installs the Railway CLI and runs `railway redeploy --service <svc> --yes` for api,
-   session, and web (scoped by `RAILWAY_TOKEN`), so each service pulls the new `:latest`.
+2. `changes` (dorny/paths-filter over the push diff; on push the action diffs local git, so
+   it needs a checkout first, #339) maps changed paths to a service list. A file under an
+   app dir selects that service; a shared input (`packages/`, `vectors/`, the lockfile,
+   `deploy/`, ...) selects all three; docs and other known-inert paths select nothing. The
+   SAFETY catch-all: any changed file matched by no rule rolls ALL THREE (fail open to a
+   full deploy, never a silent skip). `workflow_dispatch` forces a full roll.
+3. `build-and-push` builds `apps/<svc>/Dockerfile` for each listed service (context = repo
+   root) and pushes `ghcr.io/eamonma/crossy-<svc>` tagged `:latest` and `:<sha>`. A
+   docs-only push builds nothing.
+4. `migrate` still runs on every push, tolerating a skipped build: the guard, then the
+   committed migrations against hosted Postgres (see Migration flow above). It runs BEFORE
+   `roll`, so expand-before-code holds by job ordering. If the guard trips or
+   `MIGRATION_DATABASE_URL` is absent, the deploy fails here and `roll` does not run.
+5. `roll` runs `railway redeploy --service <svc> --yes` (scoped by `RAILWAY_TOKEN`) over the
+   SAME computed list the build matrix used: build set and roll set are identical by
+   construction, so a skipped build always skips that roll and an empty list rolls nothing.
    Railway pulls the private images with the pull credential from the checklist. The `:<sha>`
    tag stays available for rollback (connect a service to `crossy-<svc>:<sha>`).
-5. Services restart against the hosted Postgres and the Supabase JWKS. The api answers REST,
-   the session answers WS, and the web serves the SPA. Run `deploy/verify.mjs` to confirm.
+6. Rolled services restart against the hosted Postgres and the Supabase JWKS. Run
+   `deploy/verify.mjs` to confirm.
 
 ## Post-deploy verification
 
@@ -441,8 +460,9 @@ kept in sync by that PR-then-owner-apply discipline, the same shape as the rest 
 - `provision.sh`: create-only, idempotent Railway bootstrap (`--dry-run` prints the plan).
 - `supabase-auth.toml`: audited record of the Supabase auth session policy (config-as-code; a
   record, not an applier; see "Supabase auth session policy" above).
-- `migration-guard.mjs`: plain-node expand-only guard run before `migrate.ts` in the pipeline
-  (`node deploy/migration-guard.mjs`). Its pure functions are unit-tested in
+- `migration-guard.mjs`: plain-node guard run before `migrate.ts` in the pipeline
+  (`node deploy/migration-guard.mjs`): the expand-only deny-list plus the strictly monotonic
+  journal check (#181). Its pure functions are unit-tested in
   `packages/db/src/migration-guard.test.ts` (with the `migration-guard.d.mts` type companion).
 - `migrate.ts`: apply `packages/db` migrations to hosted Postgres (privileged DSN: direct
   or session pooler, never the transaction pooler).

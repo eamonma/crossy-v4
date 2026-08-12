@@ -1,5 +1,6 @@
 ---
 status: descriptive
+verified: 8eced56
 ---
 
 # Crossy v4 Roadmap
@@ -869,7 +870,9 @@ styling, highlight precedence), not just mechanics. Spec them per platform first
   v2 parity checklist is green, walked personally by the owner on both platforms.**
 - **M7**: OG preview images (geometry only, never fills), passivation tuning, presence
   colors everywhere, nightly simulation runs. **Exit: a link pasted in Discord unfurls
-  with the grid image.**
+  with the grid image.** The grid-image exit landed for completion shares in Wave 13.2
+  (the share link unfurls the mosaic card); the invite unfurl stays deliberately
+  content-free, so the invite geometry preview remains open.
 
 ## Phase 6 — Extension ingest (post-M5 wave)
 
@@ -1269,7 +1272,7 @@ A finished room becomes a shareable artifact: the grid as a mosaic of WHO solved
 square, in the room's identity roster, with the real lockup, the puzzle's title and
 byline, the headline stats, and the titles as film credits. Spoiler-free by
 construction: the card is built from the analysis bundle plus display metadata, so no
-letter can enter (INV-6 in spirit), which is also what lets a server render it later.
+letter can enter (INV-6 in spirit), which is what let the server render it in 13.2.
 `design/post-game/SHARE.md` pins the concept, the layout contract, and these waves.
 
 **The builder is standalone.** `packages/share-card` is a pure SVG function of data —
@@ -1277,7 +1280,7 @@ no npm deps, no workspace deps, no node builtins (`share-card-is-standalone`, th
 engine posture) — so the browser card today and the S2 server unfurl are the same
 bytes, not a port.
 
-### Wave 13.1 — client card (done, this PR)
+### Wave 13.1 — client card (done, #303)
 
 SHARE.md; `packages/share-card` (portrait/og/solo variants, both grounds, the lockup
 as embedded paths, grapheme-budget truncation, tests citing the no-letters guarantee);
@@ -1312,6 +1315,18 @@ compressed with a 90s stall cap; the whole animation gated behind
 mosaic and the page carries zero script. Still letter-free (INV-6). See
 `design/post-game/SHARE.md` S3 for the motion decisions. Exit met: a share link opens
 to the replay on web without membership.
+
+## Phase 14 — the share card grows up
+
+The 13.x card becomes the product's grid and reaches the native share sheets, all
+merged:
+
+- **Wave 14.1** (#308): the share-card mosaic becomes the bona fide play grid.
+- **Wave 14.2** (#306): the web share falls back share sheet, then clipboard, then
+  download.
+- **Wave 14.3** (#307): `card.png` grows variant/ground params for native clients.
+- **Wave 14.5** (#311): iOS shares the completion card through the system sheet.
+- **Wave 14.6** (#309): Android consumes the server render.
 
 ### Wave 14.4 — the titles become the film credits on the server card
 
@@ -1348,7 +1363,7 @@ to the vote envelope and gains the vote-lifecycle clusters with the contract, ah
 the engine, and the family is skipped-until-engine in `vectors.skip.json` until Wave
 15.2 rebinds it.
 
-### Wave 15.1 — contract (this PR)
+### Wave 15.1 — contract (#314)
 
 The PROTOCOL amendments (sections 4, 5, 6, 10, 11, 13, 14), DESIGN.md D32 and the D27
 amendment pointer, the `check` family's migration to the solo-electorate vote envelope
@@ -1425,4 +1440,23 @@ card; web keeps the Proscenium). The waves, all merged except where noted:
   pass condenses to a status capsule. Owner-tuned and merged.
 - **15.11 web ring removal** (#329).
 - **15.12 Android card**: transcribes the tuned 15.10 card into Compose, replacing
-  the Bench. In flight.
+  the Bench. Merged (#333).
+
+## Session stability (2026-08, merged)
+
+A disconnect investigation produced three tracks:
+
+- **Grace track** (A-web #335, A-android #336, A-ios #337): the reconnect overlay on
+  all three clients renders only after 2s of continuously non-live sync state and
+  hides the instant it recovers, so a routine edge proxy cycle never flashes it.
+  Presentation only; solving input is never gated, and the connection state machine,
+  transport, and backoff are untouched.
+- **Track D — session observability** (#338): a structured log line on every socket
+  close (ids, close code, socket age, reap and last-socket flags; INV-6 clean), a
+  distinct liveness-reap line, a `socket_closed` analytics event, fatal
+  unhandledRejection/uncaughtException handlers that log then exit, and the inline
+  submit's flush fault caught so one Postgres rejection no longer kills every game on
+  the process.
+- **CI/deploy** (#334, checkout fix #339): a push to main now deploys only the
+  services whose inputs changed, failing open to all three on any unmatched path;
+  #339 fixed the missing checkout before paths-filter on push. See `deploy/README.md`.
