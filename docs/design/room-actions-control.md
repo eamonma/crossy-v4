@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # The room actions control (check puzzle, end game, party)
@@ -10,6 +10,10 @@ followed (web d776c00, iOS 3351cbf), with post-merge fixes in PR #266 (00f3d23) 
 Android marks in 8a6d7d0.
 Author: DESIGN. Precedence: `vectors/` > `PROTOCOL.md` > `DESIGN.md` > this doc > any
 implementation.
+
+**Superseded in part (D32, 2026-07-18).** The check action now proposes a room-wide
+majority vote; the confirm-dialog register below is retired. `design/check-vote/UX.md`
+is the current law. The party and end-game halves stand.
 
 ## 0. Post-review revisions (authoritative; overrides the sections below where they conflict)
 
@@ -128,19 +132,16 @@ None are designed here.
 
 The RoomFactsSheet _is_ the control. It already has the right bones: opens from the time
 pill mid-solve only (SolveScreen gates `openFacts` to ongoing, which matches the check's
-GAME_NOT_ONGOING gate for free), already carries an operations block under a hairline,
-already owns the one-confirm precedent (the end-game `confirmationDialog`).
+GAME_NOT_ONGOING gate for free), already carries an operations block under a hairline.
 
 - **Check puzzle** becomes an operation row above end-game. Visible to hosts and solvers
   (spectators never see it; the server enforces the role gate regardless). Enabled only
   when the grid is full; below full it renders disabled with a quiet remaining-cells
   hint, so the row teaches the gate instead of erroring into it.
-- **Confirmation** is a system `confirmationDialog`, the end-game register exactly:
-  title "Check the puzzle for everyone?", action "Check puzzle", cancel "Keep solving".
-  Not destructive, so no red; the plain tint. One confirm, plainly worded.
+- **Confirmation**: retired by D32; the check proposes a room-wide vote instead. See
+  `design/check-vote/UX.md`.
 - **Facts**: once `checkCount > 0`, the sheet's facts gain a quiet line ("Checked once" /
-  "Checked N times"). Neutral record, no attribution, matching the wire event's missing
-  `by` (D27).
+  "Checked N times"). The record is attributed (`puzzleChecked.by`, D32).
 - No new chrome, no new morphs. The sheet's height formula extends by one operation row.
 
 ## 5. Placement: web
@@ -152,8 +153,8 @@ roster popovers), trigger sited between the avatar stack and Share.
   grid with the remaining-cells hint), **Party mode** (the existing `togglePartyHref`
   navigation), and host-only under a separator, **End game** (moved from the Share
   popover; Share keeps only invite concerns).
-- **Confirmation** reuses the end-game Dialog register: same component, non-destructive
-  styling, "Check the puzzle for everyone?" / "Check puzzle" / "Keep solving".
+- **Confirmation**: retired by D32; the check proposes a room-wide vote instead. See
+  `design/check-vote/UX.md`.
 - The popover renders only while the game is ongoing (the toolbar already knows terminal
   state; the Done chip precedent).
 
@@ -173,11 +174,11 @@ live mark on each listed cell, on both platforms and the party projector.
 
 ## 7. Non-goals
 
-- No vote, no per-user check, no reveal of correct answers (INV-6: `wrongCells` are
-  indices only).
+- No per-user check, no reveal of correct answers (INV-6: `wrongCells` are indices
+  only).
 - No scoring or achievement consumption of `checkCount`; the count is durable and waits.
-- No demo-room check: DemoRoom ignores `checkPuzzle` today and keeps doing so; the demo
-  teaches filling, not checking. Revisit only if the demo grows a full-grid moment.
+- No demo-room check: DemoRoom ignores `checkPuzzle` and `castCheckVote` (#322); the
+  demo teaches filling, not checking. Revisit only if the demo grows a full-grid moment.
 - No Android; the port branch picks this doc up on its own schedule.
 
 ## 8. Waves
