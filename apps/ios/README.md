@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # apps/ios
@@ -51,9 +51,11 @@ The engine is bound. `EngineBindings.bound` is `reducer`, `navigation`, `compara
 `then`. Binding a family is a compile-time act (a `case` cannot name a symbol that does not
 exist yet), so `bound` is the checked mirror the guard tests read.
 
-`vectors.skip.json` carries two disjoint buckets. `families` (skipped-until-engine) is now
-empty: the Wave 3 port bound every engine family and drained it, and a per-family guard
-fails the build if a bound family reappears there. `foreign.families` are `client-store`
+`vectors.skip.json` carries two disjoint buckets. `families` (skipped-until-engine) is
+empty: the Wave 3 port bound four families (reducer, comparator, navigation, completion)
+and drained it; Wave 15.1 unbound `check` when the contract was rewritten to the
+attributed-majority vote; Wave 15.5 ported the vote state machine (`applyWithVote`) and
+rebound it. A per-family guard fails the build if a bound family reappears there. `foreign.families` are `client-store`
 and `clue-runs`: consumers that are never the engine (the store; the clue-run renderer),
 shape-validated here but executed by their own suites. A family that reaches `run` with no
 binding falls through to `.noEngineBinding`; that path is now the foreign honest-failure
