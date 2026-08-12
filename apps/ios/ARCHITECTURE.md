@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # Crossy iOS Architecture
@@ -33,16 +33,16 @@ so the target graph is the dependency-cruiser and the layering ceremony is one
 `Package.swift`. Guard tests keep the hard rules greppable, as the vector runner
 already does for engine purity.
 
-| target           | ring             | imports          | contents                                                                                      |
-| ---------------- | ---------------- | ---------------- | --------------------------------------------------------------------------------------------- |
-| `CrossyEngine`   | domain           | nothing          | exists; reducer, navigation, comparator twin; frozen and pure (INV-9)                         |
-| `CrossyProtocol` | domain edge      | Foundation       | Codable twins of every wire and REST payload, pinned by contract snapshots                    |
-| `CrossyStore`    | application      | Engine, Protocol | GameStore, overlay, reconciliation, connection state machine; ports defined here as protocols |
-| `CrossyAPI`      | adapter          | Protocol         | REST client, auth session, Keychain, the issuer-pinned token handling                         |
-| `CrossySession`  | adapter          | Store, Protocol  | `URLSessionWebSocketTask` transport implementing the store's port                             |
-| `CrossyDesign`   | adapter          | Foundation       | tokens: grounds, roster, type scale, motion constants; shared with the widget extension       |
-| `CrossyUI`       | adapter          | Store, Design    | SwiftUI views, Canvas grid, key deck, haptics                                                 |
-| app target       | composition root | everything       | wiring, navigation shell, scenePhase, universal links, Live Activity                          |
+| target           | ring             | imports          | contents                                                                                                                                                                                                                          |
+| ---------------- | ---------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CrossyEngine`   | domain           | nothing          | reducer, navigation, comparator, completion, check-vote state machine (Vote.swift's `applyWithVote`, Wave 15.5); pure (INV-9), grown only by vectored contract                                                                    |
+| `CrossyProtocol` | domain edge      | Foundation       | Codable twins of every wire and REST payload, pinned by contract snapshots                                                                                                                                                        |
+| `CrossyStore`    | application      | Engine, Protocol | GameStore, overlay, reconciliation, connection state machine; ports defined here as protocols                                                                                                                                     |
+| `CrossyAPI`      | adapter          | Protocol         | REST client, auth session, Keychain, the issuer-pinned token handling                                                                                                                                                             |
+| `CrossySession`  | adapter          | Store, Protocol  | `URLSessionWebSocketTask` transport implementing the store's port                                                                                                                                                                 |
+| `CrossyDesign`   | adapter          | Foundation       | tokens: grounds, roster, type scale, motion constants; shared with the widget extension                                                                                                                                           |
+| `CrossyUI`       | adapter          | Store, Design    | SwiftUI views, Canvas grid, key deck, haptics; the room's chrome families (CheckVoteCard over the CheckVotePresentation model/policy seam, HoldToProposeButton, ShareCard; the vote card's contract is `design/check-vote/UX.md`) |
+| app target       | composition root | everything       | wiring, navigation shell, scenePhase, universal links, Live Activity                                                                                                                                                              |
 
 The Live Activity ships as a widget extension importing `CrossyDesign` plus a small
 shared attributes type; its exact home is formalized at Phase I5, recorded here so
@@ -119,7 +119,7 @@ the offline posture D19 deliberately deferred.
 
 What does persist is narrow, client-local, and never a shadow of the shared truth:
 
-- **`NavigationSettingsStore`** (CrossyUI): per-device typing preferences in
+- **`NavigationSettingsStore`** (CrossyUI): per-device typing and swipe preferences in
   UserDefaults, off the wire entirely (INV-6 untouched; nothing here is a game mutation).
 - **`ReactionSetStore`** (CrossyUI): a UserDefaults mirror of the account's reaction set
   from `GET /me`, cached so a cold start offline still shows the last-known five. A

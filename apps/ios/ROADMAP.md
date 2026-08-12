@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # Crossy iOS Roadmap
@@ -252,7 +252,9 @@ the open gate.
 Spec-first per the root Phase 5 gate: each surface gets its interaction spec as an
 amendment to `apps/ios/EXPERIENCE.md` before it is built.
 
-- [ ] a. Check styling (wrong cells hold the check style until next edit).
+- [x] a. Check styling (wrong cells hold the check style until next edit). Shipped
+      as the D27 check wash, then re-based on the D32 room vote (Waves 15.5/15.10,
+      PRs #319/#330).
 - [ ] b. Rebus entry polish: the bubble if SP-i1's findings allow it, the inline
       field if not.
 - [ ] c. Cross-reference highlighting and two-way clue links; circles and shading;
@@ -274,7 +276,8 @@ owner on device (root M6 exit).**
 
 - [ ] a. Live Activity, v1 shape from SP-i3: started on backgrounding an ongoing
       room, timer native from `firstFillAt`, last-known board state, island and
-      lock screen. No pushes yet. Code merged: SolveActivityController (app target)
+      lock screen. Pushes landed later (the shipped list below). Code merged:
+      SolveActivityController (app target)
       and the CrossyWidgets extension, with the App Group island-avatar cache
       (IslandAvatarStore, ARCHITECTURE.md §6); the owner device-walk exit is pending.
 - [ ] b. Polish pass: motion curves, haptic strengths, Reduce Motion and Reduce
@@ -300,6 +303,17 @@ Their specs live with the companions (EXPERIENCE.md §6, DESIGN.md §2/§8), not
   (PR #271 and the D29 fast-follow titles waves, root ROADMAP 12.1-12.5, iOS half #289;
   the re-base #291, contract #288), the momentum ribbon (ports web #209), the directional
   word loupe on the settled mosaic (PR #287), and sittings / active time (PR #285).
+- **The check vote.** Hold-to-propose, the room-majority vote, the native centered
+  card (Wave 15.5 #319, Wave 15.10 #330). The 15.8 strip/ring iteration was scrapped
+  unmerged (#326 closed); `design/check-vote/UX.md` owns the contract.
+- **Swipe presets.** Swipe-sensitivity presets and flick assist (#312).
+- **Reconnect grace.** The weather overlay waits out a 2 s non-live grace, so an
+  edge recycle passes invisibly (#337).
+- **The mosaic blur.** The settled wash melts into a blurred color field (#300).
+- **ActivityKit pushes.** Shipped on both halves: the session push emitter
+  (apps/session/README.md) and the iOS per-activity token registration
+  (SolveActivityController against the api's live-activity-token routes). The
+  owner device-walk (I5.a) stays the open gate.
 
 These are v1-adjacent parity with the web, not new phases; if a follow-up needs a wave
 gate it lands as one here.
@@ -309,9 +323,6 @@ gate it lands as one here.
 - Auth breadth: Sign in with Apple and passkeys (owner: later, deliberately
   unrushed). Unlocks public App Store release past guideline 4.8. Supabase carries
   both; the auth port stays vendor-neutral.
-- ActivityKit pushes: fill progress, presence lines, the away-completion moment.
-  Cross-service track (session service emits, APNs key is an owner-held secret,
-  per-activity token storage needs a design pass against INV-7 single-writer).
 - Presence glints, the clarity beat, mosaic choreography, pan-thinning chrome
   (DESIGN.md sections 4 and 8 follow-ons).
 - App Store submission pass: screenshots lead Observatory (ID-3), review notes,

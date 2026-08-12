@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # Crossy iOS Experience
@@ -30,9 +30,10 @@ DESIGN.md D06): the full glass chrome needs iOS 26; 18 through 25 gets the same
 layout on a simple blur material (apps/ios/DESIGN.md section 4). Nothing here races
 a deadline.
 
-**Non-goals for v1**, recorded so nobody quietly builds them: iPad-optimized layout,
-offline solving, widgets beyond the Live Activity, puzzle construction or discovery,
-analytics UI, Android (root DESIGN.md section 1 non-goals apply wholesale).
+**Non-goals for this app's v1**, recorded so nobody quietly builds them: iPad-optimized
+layout, offline solving, widgets beyond the Live Activity, puzzle construction or
+discovery, analytics UI (root DESIGN.md section 1 non-goals apply wholesale). Android
+ships as its own app (`apps/android/PARITY.md`), out of this document's scope.
 
 ## 2. The journey
 
@@ -123,8 +124,9 @@ States, each honest and distinct:
   optimistic overlay, echo clears it (INV-10). Navigation follows the vectored
   rules; swipe along the solving direction is next/previous word, across it toggles
   (root DESIGN.md section 5). Tap the clue bar or pull it up for the clue browser.
-  Check is a deliberate action (`checkRequest`), wrong cells render in check style
-  until next edit. Rebus entry via the bubble (D12). Conflicts are the 300 ms flash,
+  A hold on the Check control proposes a majority vote (`checkPuzzle`); the room
+  votes on a native centered card, and a passing vote marks the wrong cells until
+  each is edited (`design/check-vote/UX.md`). Rebus entry via the bubble (D12). Conflicts are the 300 ms flash,
   nothing silent (D02).
 - **Watching (spectator).** An edge on iOS, not the landing: full accounts seat as
   solvers, so this state serves the rare full-account spectator (a seat predating
@@ -135,15 +137,20 @@ States, each honest and distinct:
   section 15).
 - **Resyncing / reconnecting.** The three-state weather (PROTOCOL.md section 7)
   rendered as described in `DESIGN.md` section 8: calm dot, breathing dot, dimmed
-  room with countdown. Input during reconnect is held gracefully, not swallowed
+  room with countdown. None of it renders until the connection has stayed non-live
+  for 2 s (`RoomWeather.reconnectOverlayGraceSeconds`), so a routine edge recycle
+  passes invisibly. Input during reconnect is held gracefully, not swallowed
   silently: the overlay and reconciliation rules of PROTOCOL.md section 8 govern.
 - **Completed.** The mosaic plays under a brief roster-colored confetti drift
   (owner ask 2026-07-11; Reduce Motion skips the drift, the summary still
   lands) and the stats arrive with it (owner ruling 2026-07-10): the frozen
   time, entries, solvers (`gameCompleted.stats`). The time pill seals, a quiet
   check beside the frozen clock, and its tap summons the stats card back (the
-  pill inflated, DESIGN.md section 4). The connection stays open; the room
-  becomes a finished object you can revisit from Rooms.
+  pill inflated, DESIGN.md section 4). The settle melts into a blurred color
+  field, the mosaic blur (`apps/ios/DESIGN.md` section 8 owns the ruling), and
+  the completed room offers the share card through the system sheet (PR #311).
+  The connection stays open; the room becomes a finished object you can revisit
+  from Rooms.
 - **Abandoned.** Terminal and quiet: the board freezes with a one-line notice,
   and the pill keeps the frozen clock alone.
 - **Kicked.** `kicked` notice then close: the room exits with one honest sentence;
@@ -263,6 +270,16 @@ drawn, recorded so the doc matches reality; each keeps its own home:
   #288/#289/#291), the momentum ribbon that replays the solve (`MomentumRibbon`;
   ports web PR #209), and the directional word loupe over the settled mosaic (PR #287;
   apps/ios/DESIGN.md §2 owns the loupe). Sittings and active time land here too (PR #285).
+- **The check vote.** A hold on Check proposes a room-majority vote, presented as a
+  native centered card (`CheckVoteCard`, `HoldToProposeButton`; PRs #319, #330);
+  `design/check-vote/UX.md` owns the contract.
+- **The completion share card.** The Analysis header's "Share card" mints the share
+  link, fetches the server-rendered card PNG, and presents the system sheet
+  (`ShareCard`; PR #311).
+- **Swipe presets.** Swipe-sensitivity presets and flick assist, per-device in
+  Settings (`NavigationSettingsStore`; PR #312).
+- **The mosaic blur.** The settled wash melts into a blurred color field
+  (PR #300; DESIGN.md §8 owns the ruling).
 
 ## 7. Open questions (owner review)
 

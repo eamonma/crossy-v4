@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # Crossy iOS Design Language
@@ -763,7 +763,9 @@ Motion cuts the balloon and tremble to a plain fade.
   then refrosts as the stats arrive.
 - **Honest weather.** Three connection states, three registers (PROTOCOL.md
   section 7): live is a calm dot, resyncing is a breathing dot, reconnecting dims
-  the room with a quiet countdown. Never a modal, never a spinner over the grid.
+  the room with a quiet countdown; the non-live registers hold back until the
+  state has stood 2 s (`RoomWeather.reconnectOverlayGraceSeconds`), so an edge
+  recycle never flashes them. Never a modal, never a spinner over the grid.
   The weather lives in the time pill (owner ruling 2026-07-10): the dot and the
   countdown sit beside the ambient clock, one pill for the room's vital signs.
   At a terminal status the weather stands down (a finished room's connection is
@@ -798,7 +800,8 @@ Motion cuts the balloon and tremble to a plain fade.
 ## 9. Decision log
 
 Format follows the root decision log. ID-1 through ID-5 were ruled by the owner on
-2026-07-10.
+2026-07-10. This log is not complete for room chrome: the check-vote surface's law
+lives in `design/check-vote/UX.md`, as amended by the device-tuning reversal (#327).
 
 - **ID-1 Attribution at rest is ink** (adopted 2026-07-10). Letters never carry
   color at rest; the only person-marker on the board at rest is the presence puck
