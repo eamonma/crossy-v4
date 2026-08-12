@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # Crossy Android Architecture
@@ -20,7 +20,9 @@ iOS log as AAD-n (Android Architecture Decision).
   (no Redux/MVI framework); the vectors are the formalism.
 - Ports and adapters (§4, AD-6): ports defined in `:store`, adapters outward,
   reconnect logic is store code, adapters only sleep, jitter, and dial.
-- Persistence (§6, AD-4): none beyond the secure token store in v1.
+- Persistence (§6, AD-4 as amended): no game-state DB. The Keystore token store plus
+  client-local prefs and caches: NavigationSettingsStore (typing + swipe),
+  ReactionSettingsStore, the OkHttp avatar cache.
 - Replay (§7): the store is pure over an injected transport; previews and tests feed
   it scripted frames or real `cell_events`.
 - Testing (§9): client-store vectors against `:store`, contract snapshots against
@@ -42,6 +44,10 @@ dependency block is the dependency-cruiser, exactly as `Package.swift` is on iOS
 | `:design`   | adapter          | nothing          | `CrossyDesign`   | yes      |
 | `:ui`       | adapter          | store, design    | `CrossyUI`       | no       |
 | `:app`      | composition root | everything       | app target       | no       |
+
+`:engine` carries the D32 vote machine (Vote.kt ports `applyWithVote`, #320); the
+`families` list in `apps/android/vectors.skip.json` is drained to `[]`, so every
+engine vector family executes against `:engine`.
 
 JVM-pure modules build and test with no Android SDK: the whole domain core runs
 headless on any CI box, and the integration round trip against the local stack is a
