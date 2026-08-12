@@ -1,9 +1,11 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
-# The share surface
+# The invite share surface
+
+The completion share card is `design/post-game/SHARE.md`.
 
 Status: SHIPPED as the native menu (owner ruling 2026-07-11). Date: 2026-07-11.
 Scope: the dedicated share pill on iOS, presenting a system Menu, and the
@@ -159,6 +161,5 @@ should confirm the close reads clean.
   QR, native share, and Party; end game moved to the room-actions popover
   (`GameToolbar.tsx:274,398`), per room-actions-control R3.
 
-DESIGN.md §4 carries the ratified amendments (share = native menu, facts card
-= metaball on 26+); this note is history and pointers, DESIGN.md stays
-normative.
+DESIGN.md §4 carries the ratified amendments (share = native menu); this note
+is history and pointers, DESIGN.md stays normative.
