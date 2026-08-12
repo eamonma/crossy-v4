@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # @crossy/engine
@@ -13,8 +13,8 @@ builtins. Timestamps and user ids arrive as plain data on commands.
 
 The conformance vectors under `vectors/v1` are the specification. Nothing lands in
 `src` before the vector that pins it. The vitest runner (`src/vectors.test.ts`) binds
-each engine family to an entry point and asserts every case; the Swift port (Wave 3)
-runs the same JSON through XCTest.
+each engine family to an entry point and asserts every case; the Swift and Kotlin ports
+run the same JSON through XCTest and JUnit.
 
 ## Type ownership: why the engine owns its own domain types
 
@@ -26,7 +26,8 @@ protocol types in through a shared third package (which would just relocate the
 coupling INV-9 forbids), the two worlds are kept separate on purpose:
 
 - **The engine owns its own dependency free domain types** (`src/types.ts`):
-  `BoardState`, `Command`, `Event`, `Cell`, `Grid`, `Direction`, and the rest. They
+  `BoardState`, `Command`, `Event`, `Cell`, `Grid`, `Direction`, the vote family
+  (`CheckVote`, `VoteCommand`, `VoteEvent`, `VoteResult`, and kin), and the rest. They
   describe the game as the pure functions see it, with no notion of a socket, a JSON
   frame, or a version. They are shaped by the domain, not by the wire.
 - **`packages/protocol` owns the wire types**: the message schemas, `hello`/`welcome`,
@@ -51,8 +52,8 @@ both import reintroduces the exact inbound dependency INV-9 exists to forbid, an
 couples the domain vocabulary to the wire vocabulary so neither can move without the
 other. Generating engine types from the protocol schema has the same coupling with an
 added build step. Keeping two hand written type sets aligned by the vectors is the
-lightest arrangement that honors the invariant, and it matches how the Swift port
-already works: a second, independent type set held true by the same fixtures.
+lightest arrangement that honors the invariant, and it matches how the Swift and Kotlin
+ports already work: two more independent type sets held true by the same fixtures.
 
 ## Public surface
 
@@ -62,6 +63,12 @@ already works: a second, independent type set held true by the same fixtures.
 - `applyWithCompletion(state, command, puzzle)`: the two phase completion driver. It
   reduces, then, while the board is full, runs the comparator over the whole board and
   emits exactly one `gameCompleted` on a pass (level triggered, DESIGN.md section 3).
+- `applyWithVote(state, command, puzzle)`: the check vote state machine (D32) beside
+  completion. `checkPuzzle` freezes the supplied electorate and opens a vote,
+  `castCheckVote` records an immutable ballot, and the vote resolves when a majority
+  approves, a majority becomes unreachable, or the expiry input arrives; a mutation
+  that breaks the full grid or completes the game cancels it. The electorate and the
+  expiry tick arrive as data (INV-9).
 - `matches(solution, value)`: the comparator. A filled value passes if, comparing ASCII
   case insensitively, it equals the full solution string or the solution's first
   character (D12).

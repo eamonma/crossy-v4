@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # @crossy/sim
@@ -26,6 +26,9 @@ in only for the wire between them, the piece a WebSocket normally provides, and 
 built to survive: message delay, single-frame loss forcing a resync, disconnect, and
 reconnect forcing snapshot reconciliation. Delivery within one connection is never
 reordered, honoring the per-connection ascending-`seq` contract (PROTOCOL.md section 7).
+
+The check-vote lifecycle is not simulated: the sim routes `placeLetter`, `clearCell`,
+and `requestSync` only.
 
 ## Placement decision and rationale
 
@@ -73,7 +76,8 @@ DESIGN.md section 15 default thresholds and prints observed flush batch sizes an
 ## Speed split
 
 The fast property loops run entirely in process against an in-memory `RecordingPersistence`
-that mirrors the two session-owned tables (append the log, upsert the snapshot). No Docker,
+that mirrors the session-owned tables (append the `cell_events`, `check_events`, and
+`check_vote_events` logs, upsert the `game_state` snapshot; `src/sim.ts`, #318). No Docker,
 no sockets, thousands of programs per second.
 
 Only INV-5 genuinely needs a real flush and rehydrate, because the "snapshot and log agree"
