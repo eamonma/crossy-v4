@@ -1,6 +1,6 @@
 ---
 status: normative
-verified: 133db08
+verified: 8eced56
 ---
 
 # Puzzle-digest vectors

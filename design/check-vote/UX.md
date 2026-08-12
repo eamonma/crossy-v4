@@ -1,3 +1,7 @@
+---
+status: normative
+---
+
 # The check vote: UX contract
 
 Owner-ratified 2026-07-18, from the D32 design session. This pins the experience the

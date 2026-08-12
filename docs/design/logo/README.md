@@ -1,6 +1,6 @@
 ---
 status: descriptive
-verified: 133db08
+verified: 8eced56
 ---
 
 # Crossy logo
